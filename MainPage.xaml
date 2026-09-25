@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:MIDIRift"
+             x:Class="MIDIRift.MainPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{DynamicResource PageBackground}">
+
+    <Grid x:Name="RootGrid" RowDefinitions="Auto,*,Auto,Auto">
+
+        <!-- ── Barra superior: Playlist / Espectro / Osciloscopio ──────────
+             Antes vivían mezclados con los controles de abajo (Playlist
+             como botón de transporte, Espectro/Osciloscopio como fila
+             aparte). Ahora quedan arriba, fuera del flujo de reproducción,
+             y el lugar que dejó Playlist en la fila de transporte lo ocupa
+             Shuffle. Siempre visible, en cualquier orientación (ver
+             MainPage.xaml.cs, UpdateChromeVisibility: en horizontal solo se
+             ocultan los controles secundarios de más abajo). -->
+        <Grid x:Name="TopBar"
+              Grid.Row="0"
+              ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
+              ColumnSpacing="6"
+              Padding="12,8"
+              BackgroundColor="{DynamicResource SurfaceBackground}">
+
+            <!-- Versión de producto visible. NO está ligada al VersionCode de Android.
+                 La mantenemos aquí para poder identificar inmediatamente qué build
+                 está instalada sin volver a tocar los numeritos peligrosos del paquete. -->
+            <VerticalStackLayout Grid.Column="0"
+                                 VerticalOptions="Center"
+                                 Spacing="0">
+                <Label Text="{x:Static local:MidiRiftVersion.Display}"
+                       FontSize="11"
+                       FontAttributes="Bold"
+                       TextColor="{DynamicResource TextMuted}"
+                       MaxLines="1"
+                       LineBreakMode="TailTruncation" />
+                <Label Text="Build 2026.09.06"
+                       FontSize="9"
+                       TextColor="{DynamicResource TextSubtle}"
+                       MaxLines="1" />
+            </VerticalStackLayout>
+
+            <Button x:Name="SpectrumToggleButton"
+                    Grid.Column="1"
+                    Text=""
+                    ImageSource="icon_spectrum.svg"
+                    Padding="10"
+                    SemanticProperties.Description="Mostrar u ocultar espectro"
+                    Clicked="OnSpectrumToggleClicked"
+                    BackgroundColor="{DynamicResource ControlBackground}"
+                    TextColor="{DynamicResource TextMuted}"
+                    FontSize="18"
+                    CornerRadius="10"
+                    WidthRequest="44"
+                    HeightRequest="40" />
+
+            <Button x:Name="OscilloscopeToggleButton"
+                    Grid.Column="2"
+                    Text=""
+                    ImageSource="icon_oscilloscope.svg"
+                    Padding="10"
+                    SemanticProperties.Description="Mostrar u ocultar osciloscopio"
+                    Clicked="OnOscilloscopeToggleClicked"
+                    BackgroundColor="{DynamicResource ControlBackground}"
+                    TextColor="{DynamicResource TextMuted}"
+                    FontSize="18"
+                    CornerRadius="10"
+                    WidthRequest="44"
+                    HeightRequest="40" />
+
+            <Button x:Name="DsnLikeToggleButton"
+                    Grid.Column="3"
+                    Text="DSN"
+                    Padding="5"
+                    SemanticProperties.Description="Abrir laboratorio DSN-like"
+                    Clicked="OnDsnLikeToggleClicked"
+                    BackgroundColor="{DynamicResource ControlBackground}"
+                    TextColor="{DynamicResource TextMuted}"
+                    FontSize="11"
+                    FontAttributes="Bold"
+                    CornerRadius="10"
+                    WidthRequest="44"
+                    HeightRequest="40" />
+
+            <Button x:Name="EqualizerToggleButton"
+                    Grid.Column="4"
+                    Text=""
+                    ImageSource="icon_equalizer.svg"
+                    Padding="10"
+                    SemanticProperties.Description="Abrir ecualizador"
+                    Clicked="OnEqualizerClicked"
+                    BackgroundColor="{DynamicResource ControlBackground}"
+                    TextColor="{DynamicResource TextMuted}"
+                    FontSize="18"
+                    CornerRadius="10"
+                    WidthRequest="44"
+                    HeightRequest="40" />
+
+            <Button x:Name="EngineSettingsButton"
+                    Grid.Column="5"
+                    Text=""
+                    ImageSource="icon_settings.svg"
+                    Padding="10"
+                    SemanticProperties.Description="Configuración"
+                    Clicked="OnEngineSettingsClicked"
+                    BackgroundColor="{DynamicResource ControlBackground}"
+                    TextColor="{DynamicResource TextMuted}"
+                    FontSize="18"
+                    CornerRadius="10"
+                    WidthRequest="44"
+                    HeightRequest="40" />
+        </Grid>
+
+        <!-- ── Panel central: Tracker / Spectrum / Osciloscopio / placeholder MP3 ── -->
+        <ContentView x:Name="TrackerContainer"
+                     Grid.Row="1"
+                     BackgroundColor="{DynamicResource CanvasBackground}">
+            <ContentView.GestureRecognizers>
+                <!-- En landscape, un toque sobre el área visual alterna el
+                     chrome completo sin bloquear el scroll ni los dropdowns. -->
+                <TapGestureRecognizer Tapped="OnTrackerAreaTapped" />
+            </ContentView.GestureRecognizers>
+        </ContentView>
+
+        <!-- ── Controles inferiores ─────────────────────────────────────── -->
+        <VerticalStackLayout x:Name="BottomControls"
+                             Grid.Row="2"
+                             Padding="16,10"
+                             Spacing="8"
+                             BackgroundColor="{DynamicResource SurfaceBackground}">
+
+            <!-- Controles "secundarios": info de la canción, estado de
+                 playlist, progreso y velocidad. En horizontal (ver
+                 MainPage.xaml.cs, UpdateChromeVisibility) este bloque se
+                 oculta para darle más alto al tracker/paneles — son datos
+                 que se leen de un vistazo, no controles imprescindibles.
+                 Los botones de transporte (Play/Pause/Stop/etc., más abajo)
+                 quedan SIEMPRE visibles, en cualquier orientación: ocultar
+                 la forma de controlar la reproducción era justamente el bug
+                 a corregir acá. -->
+            <VerticalStackLayout x:Name="SecondaryControls" Spacing="8">
+
+                <!-- Info de la canción actual (antes vivía arriba, en la cintilla) -->
+                <Border x:Name="TrackInfoPanel"
+                        BackgroundColor="{DynamicResource CardBackground}"
+                        Stroke="{DynamicResource BorderColor}"
+                        StrokeThickness="1"
+                        Padding="8"
+                        StrokeShape="RoundRectangle 8">
+                    <!-- Misma composición compacta del mini reproductor de la
+                         biblioteca: icono a la izquierda y dos líneas que usan
+                         todo el ancho disponible. El título largo se desplaza
+                         por bloques desde MainPage.xaml.cs. -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <Border Grid.Column="0"
+                                BackgroundColor="{DynamicResource PurplePrimary}"
+                                StrokeThickness="0"
+                                WidthRequest="42"
+                                HeightRequest="42"
+                                StrokeShape="RoundRectangle 8"
+                                VerticalOptions="Center">
+                            <Label x:Name="TrackCoverLabel"
+                                   Text="🎵"
+                                   FontSize="18"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1"
+                                             VerticalOptions="Center"
+                                             Spacing="1">
+                            <Label x:Name="FileNameLabel"
+                                   Text="Ningún archivo seleccionado"
+                                   FontSize="13"
+                                   TextColor="{DynamicResource TextPrimary}"
+                                   MaxLines="1"
+                                   LineBreakMode="NoWrap" />
+                            <Label x:Name="FileInfoLabel"
+                                   Text=""
+                                   FontSize="11"
+                                   TextColor="{DynamicResource TextMuted}"
+                                   MaxLines="1"
+                                   LineBreakMode="MiddleTruncation" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Playlist activa + status, en una sola fila para ahorrar alto -->
+                <Grid x:Name="PlaybackStatusRow" ColumnDefinitions="*,Auto">
+                    <Label x:Name="PlaylistStatusLabel"
+                           Grid.Column="0"
+                           Text=""
+                           FontSize="11"
+                           TextColor="{DynamicResource TextSubtle}"
+                           LineBreakMode="MiddleTruncation"
+                           IsVisible="False" />
+                    <Label x:Name="StatusLabel"
+                           Grid.Column="1"
+                           Text="Abrí la playlist (📃) para elegir una canción"
+                           FontSize="11"
+                           TextColor="{DynamicResource TextMuted}"
+                           HorizontalTextAlignment="End"
+                           LineBreakMode="MiddleTruncation" />
+                </Grid>
+
+                <!-- Barra de progreso -->
+                <Grid x:Name="ProgressControls" ColumnDefinitions="Auto,*,Auto">
+                    <Label x:Name="ElapsedLabel"
+                           Grid.Column="0"
+                           Text="00:00"
+                           FontSize="11"
+                           TextColor="{DynamicResource TextSubtle}"
+                           VerticalOptions="Center" />
+                    <Slider x:Name="ProgressSlider"
+                            Grid.Column="1"
+                            Minimum="0"
+                            Maximum="1"
+                            Value="0"
+                            MinimumTrackColor="{DynamicResource GreenPrimary}"
+                            MaximumTrackColor="{DynamicResource ControlBackground}"
+                            ThumbColor="{DynamicResource GreenAccent}"
+                            Margin="8,0"
+                            VerticalOptions="Center"
+                            DragStarted="OnProgressDragStarted"
+                            DragCompleted="OnProgressDragCompleted"
+                            ValueChanged="OnProgressSliderValueChanged" />
+                    <Label x:Name="TotalLabel"
+                           Grid.Column="2"
+                           Text="00:00"
+                           FontSize="11"
+                           TextColor="{DynamicResource TextSubtle}"
+                           VerticalOptions="Center" />
+                </Grid>
+
+                <!-- Slider de velocidad -->
+                <Grid x:Name="SpeedControls" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                    <Label Grid.Column="0"
+                           Text="SPD"
+                           FontSize="11"
+                           TextColor="{DynamicResource TextSubtle}"
+                           VerticalOptions="Center" />
+                    <Slider x:Name="SpeedSlider"
+                            Grid.Column="1"
+                            Minimum="0.25"
+                            Maximum="2.0"
+                            Value="1.0"
+                            ValueChanged="OnSpeedChanged"
+                            ThumbColor="{DynamicResource GreenPrimary}"
+                            MinimumTrackColor="{DynamicResource GreenPrimary}"
+                            MaximumTrackColor="{DynamicResource ControlBackground}" />
+                    <Label x:Name="SpeedLabel"
+                           Grid.Column="2"
+                           Text="1.00×"
+                           FontSize="11"
+                           TextColor="{DynamicResource TextMuted}"
+                           WidthRequest="40"
+                           VerticalOptions="Center" />
+                    <Button x:Name="ResetSpeedButton"
+                            Grid.Column="3"
+                            Text="↺"
+                            Clicked="OnResetSpeedClicked"
+                            BackgroundColor="{DynamicResource ControlBackground}"
+                            TextColor="{DynamicResource TextMuted}"
+                            FontSize="14"
+                            Padding="0"
+                            CornerRadius="8"
+                            WidthRequest="30"
+                            HeightRequest="30"
+                            VerticalOptions="Center" />
+                </Grid>
+
+                <!-- Mezclador por canal MIDI. El centro (1.00x) conserva el balance original. -->
+                <Grid x:Name="ChannelVolumeControls"
+                      ColumnDefinitions="Auto,*,Auto,Auto"
+                      ColumnSpacing="8"
+                      IsVisible="False">
+                    <Picker x:Name="ChannelVolumePicker"
+                            Grid.Column="0"
+                            Title="Canal"
+                            WidthRequest="112"
+                            TextColor="{DynamicResource TextMuted}"
+                            SelectedIndexChanged="OnChannelVolumeSelectionChanged" />
+                    <Slider x:Name="ChannelVolumeSlider"
+                            Grid.Column="1"
+                            Minimum="0"
+                            Maximum="2"
+                            Value="1"
+                            ThumbColor="{DynamicResource GreenPrimary}"
+                            MinimumTrackColor="{DynamicResource GreenPrimary}"
+                            MaximumTrackColor="{DynamicResource ControlBackground}"
+                            ValueChanged="OnChannelVolumeChanged" />
+                    <Label x:Name="ChannelVolumeLabel"
+                           Grid.Column="2"
+                           Text="1.00×"
+                           WidthRequest="46"
+                           FontSize="11"
+                           TextColor="{DynamicResource TextMuted}"
+                           VerticalOptions="Center" />
+                    <Button x:Name="ResetChannelVolumesButton"
+                            Grid.Column="3"
+                            Text="RESET"
+                            Clicked="OnResetChannelVolumesClicked"
+                            BackgroundColor="{DynamicResource ControlBackground}"
+                            TextColor="{DynamicResource TextMuted}"
+                            FontSize="10"
+                            Padding="6,0"
+                            CornerRadius="8"
+                            HeightRequest="30"
+                            VerticalOptions="Center" />
+                </Grid>
+
+            </VerticalStackLayout>
+
+            <!-- Botones de control (mismo orden que ControlPanel de escritorio:
+                 Shuffle · Prev · Play/Pause · Stop · Loop · Next).
+                 Siempre visibles, en cualquier orientación. -->
+            <Grid ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="6">
+                <Button x:Name="ShuffleButton"
+                        Grid.Column="0"
+                        Text=""
+                        ImageSource="icon_shuffle.svg"
+                        Padding="12"
+                        BorderColor="{DynamicResource BorderStrong}"
+                        BorderWidth="1"
+                        SemanticProperties.Description="Reproducción aleatoria desactivada"
+                        Clicked="OnShuffleClicked"
+                        BackgroundColor="{DynamicResource ControlBackground}"
+                        TextColor="{DynamicResource TextSubtle}"
+                        FontSize="18"
+                        CornerRadius="10"
+                        HeightRequest="48" />
+
+                <Button x:Name="PrevButton"
+                        Grid.Column="1"
+                        Text="⏮"
+                        Clicked="OnPrevClicked"
+                        BackgroundColor="{DynamicResource ControlBackground}"
+                        TextColor="{DynamicResource TextMuted}"
+                        FontSize="18"
+                        CornerRadius="10"
+                        HeightRequest="48"
+                        IsEnabled="False" />
+
+                <!-- Un solo botón que alterna ▶/⏸ según el estado, igual que
+                     _btnPlay en el ControlPanel de escritorio -->
+                <Button x:Name="PlayPauseButton"
+                        Grid.Column="2"
+                        Text=""
+                        ImageSource="icon_play.svg"
+                        Padding="11"
+                        SemanticProperties.Description="Reproducir"
+                        Clicked="OnPlayPauseClicked"
+                        BackgroundColor="{DynamicResource PurplePrimary}"
+                        TextColor="White"
+                        FontSize="20"
+                        CornerRadius="10"
+                        HeightRequest="48"
+                        IsEnabled="False" />
+
+                <Button x:Name="StopButton"
+                        Grid.Column="3"
+                        Text="■"
+                        Clicked="OnStopClicked"
+                        BackgroundColor="{DynamicResource ControlBackground}"
+                        TextColor="{DynamicResource TextMuted}"
+                        FontSize="20"
+                        CornerRadius="10"
+                        HeightRequest="48"
+                        IsEnabled="False" />
+
+                <!-- Ciclo de 3 estados: apagado / repetir canción / repetir playlist -->
+                <Button x:Name="LoopButton"
+                        Grid.Column="4"
+                        Text="⟳"
+                        Clicked="OnLoopClicked"
+                        BackgroundColor="{DynamicResource ControlBackground}"
+                        TextColor="{DynamicResource TextSubtle}"
+                        FontSize="20"
+                        CornerRadius="10"
+                        HeightRequest="48" />
+
+                <Button x:Name="NextButton"
+                        Grid.Column="5"
+                        Text="⏭"
+                        Clicked="OnNextClicked"
+                        BackgroundColor="{DynamicResource ControlBackground}"
+                        TextColor="{DynamicResource TextMuted}"
+                        FontSize="18"
+                        CornerRadius="10"
+                        HeightRequest="48"
+                        IsEnabled="False" />
+            </Grid>
+
+        </VerticalStackLayout>
+
+        <!-- ── Navegación inferior (Biblioteca / Reproduciendo ahora) ──────
+             Siempre visible, en cualquier orientación — igual criterio que
+             los botones de transporte de arriba. Esta página es la pantalla
+             "Reproduciendo ahora", así que ActiveScreen="NowPlaying". -->
+        <local:BottomNavBar x:Name="BottomNavigation"
+                            Grid.Row="3"
+                            ActiveScreen="NowPlaying" />
+    </Grid>
+
+</ContentPage>

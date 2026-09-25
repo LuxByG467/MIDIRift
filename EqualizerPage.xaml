@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MIDIRift.EqualizerPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{DynamicResource PageBackground}">
+    <Grid RowDefinitions="Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="14,8" BackgroundColor="{DynamicResource SurfaceBackground}">
+            <Label Text="Ecualizador" FontSize="17" FontAttributes="Bold" TextColor="{DynamicResource TextPrimary}" VerticalOptions="Center" />
+            <Button Grid.Column="1" Text="✕" Clicked="OnCloseClicked" BackgroundColor="Transparent"
+                    TextColor="{DynamicResource TextMuted}" FontSize="18" WidthRequest="40" HeightRequest="40" />
+        </Grid>
+        <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Default">
+            <VerticalStackLayout x:Name="EqContentHost" Spacing="0">
+                <Grid x:Name="EqLoadingShell" Padding="16,18">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Preparando ecualizador…" FontSize="14" TextColor="{DynamicResource TextSecondary}" />
+                        <ActivityIndicator IsRunning="True" HorizontalOptions="Start" />
+                    </VerticalStackLayout>
+                </Grid>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

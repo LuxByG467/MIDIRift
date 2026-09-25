@@ -1,0 +1,8 @@
+Archivos modificados:
+- Channel.cs
+  - Añadido snapshot PlaybackTrack contiguo y SealPlaybackTrack().
+- Platforms/Android/ChiptuneAudioTrack.cs
+  - Sella el track al construir el engine.
+  - Usa PlaybackTrack/PlaybackTrackCount en render, duración, seek y límites.
+- DESKTOP_OPTIMIZATIONS_PORT.md
+  - Análisis técnico, cambios y plan de vectorización ARM/neutral.

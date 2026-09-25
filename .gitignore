@@ -1,0 +1,57 @@
+# Visual Studio / .NET build output
+.vs/
+**/bin/
+**/obj/
+artifacts/
+TestResults/
+
+# User-specific IDE files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+.idea/
+
+# Build packages / generated installers
+*.apk
+*.aab
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+
+# Signing material and local secrets
+*.keystore
+*.jks
+*.pfx
+*.p12
+*.snk
+*.key
+*.pem
+secrets.json
+appsettings.*.local.json
+.env
+.env.*
+
+# Logs, dumps and temporary files
+*.log
+*.tmp
+*.temp
+*.dmp
+*.bak
+*~
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# NuGet local packages
+packages/
+*.nupkg
+*.snupkg
+
+# Keep MIDIRift's checked-in native AAudio libraries. They are intentionally
+# versioned together with their C++ source under Platforms/Android/Native/.
+!Platforms/Android/Native/libs/**/*.so

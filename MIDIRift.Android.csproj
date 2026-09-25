@@ -1,0 +1,160 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net10.0-android</TargetFrameworks>
+		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+
+		<!-- Note for MacCatalyst:
+		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
+		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
+		The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
+		either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
+		<!-- For example: <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers> -->
+
+		<OutputType>Exe</OutputType>
+		<RootNamespace>MIDIRift</RootNamespace>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<!-- Enable XAML source generation for faster build times and improved performance.
+		     This generates C# code from XAML at compile time instead of runtime inflation.
+		     To disable, remove this line.
+		     For individual files, you can override by setting Inflator metadata:
+		       <MauiXaml Update="MyPage.xaml" Inflator="Default" /> (reverts to defaults: Runtime for Debug, XamlC for Release)
+		       <MauiXaml Update="MyPage.xaml" Inflator="Runtime" /> (force runtime inflation) -->
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+		<!-- Display name -->
+		<ApplicationTitle>MIDIRift</ApplicationTitle>
+
+		<!-- App Identifier -->
+		<ApplicationId>com.midirift.android</ApplicationId>
+
+		<!-- Versions -->
+		<ApplicationDisplayVersion>0.14.0-alpha</ApplicationDisplayVersion>
+		<ApplicationVersion>140</ApplicationVersion>
+
+		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
+		<WindowsPackageType>None</WindowsPackageType>
+
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+		<!-- 23.0 (Android 6.0) porque androidx.lifecycle.lifecycle-runtime (dependencia
+		     transitiva de Xamarin.AndroidX.Media) lo exige como mínimo; con 21.0
+		     falla el merge del AndroidManifest.xml. -->
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- App Icon -->
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+
+		<!-- Splash Screen -->
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+
+		<!-- Images -->
+		<MauiImage Include="Resources\Images\*" />
+		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+
+		<!-- Custom Fonts -->
+		<MauiFont Include="Resources\Fonts\*" />
+
+		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<!-- Paquetes multiplataforma (MAUI, audio/MIDI, gráficos).
+
+	     Microsoft.Maui.Controls / Controls.Core / Controls.Build.Tasks NO se
+	     referencian a mano acá abajo: con <UseMaui>true</UseMaui> el SDK de
+	     .NET MAUI ya los agrega implícitamente, en la versión que coincide
+	     con el workload que tengas instalado. Fijarlos manualmente a una
+	     versión concreta (como estaba antes: 11.0.0-preview.6.26360.8) es
+	     justo lo que te tiró los 453 errores: esa versión de Controls exige
+	     workload 11.0.0, pero el instalado en tu máquina es 10.0.20, y con
+	     ese desfase el compilador deja de reconocer hasta ContentPage o
+	     IDispatcherTimer. Si en algún momento SÍ necesitás features de MAUI
+	     11 preview, lo que hay que actualizar es el workload
+	     (`dotnet workload update` / reparar el workload MAUI desde el
+	     instalador de Visual Studio), no forzar la versión del paquete acá. -->
+	<ItemGroup>
+		<PackageReference Include="NAudio" Version="3.0.0-preview.18" />
+		<PackageReference Include="NAudio.Core" Version="3.0.0-preview.18" />
+		<PackageReference Include="NAudio.Midi" Version="3.0.0-preview.18" />
+		<PackageReference Include="OpenTK" Version="5.0.0-pre.16" />
+		<PackageReference Include="OpenTK.Audio.OpenAL" Version="5.0.0-pre.14" />
+		<PackageReference Include="OpenTK.Core" Version="5.0.0-pre.16" />
+		<PackageReference Include="SkiaSharp" Version="4.151.0-rc.1.1" />
+		<PackageReference Include="SkiaSharp.Views" Version="4.151.0-rc.1.1" />
+		<PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="4.151.0-rc.1.1" />
+		<PackageReference Include="SkiaSharp.Views.Maui.Core" Version="4.151.0-rc.1.1" />
+	</ItemGroup>
+
+	<!-- Paquetes exclusivos de Android: Skia nativo + androidx.media para los
+	     controles nativos de reproducción (MediaPlaybackService).
+
+	     IMPORTANTE sobre versiones: Xamarin.AndroidX.Core y
+	     Xamarin.AndroidX.Core.Core.Ktx están pineados a la MISMA versión a
+	     propósito. Desde que Google fusionó core-ktx dentro de core, si
+	     estos dos quedan en versiones distintas, D8 termina empaquetando
+	     clases de Kotlin duplicadas (p. ej. "AnimatorKt$addListener$1 is
+	     defined multiple times") y la compilación falla en la fase de
+	     dexing, no en tu código C#. Si en algún momento actualizás
+	     Xamarin.AndroidX.Media, actualizá también Core y Core.Ktx juntos,
+	     a la misma versión, desde el administrador de paquetes NuGet
+	     (pestaña Actualizaciones, seleccionando todos los Xamarin.AndroidX.*
+	     de una), en vez de tocar uno solo a mano. -->
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+		<PackageReference Include="SkiaSharp.NativeAssets.Android" Version="4.151.0-rc.1.1" />
+
+		<PackageReference Include="Xamarin.AndroidX.Core" Version="1.19.0.1" />
+		<PackageReference Include="Xamarin.AndroidX.Core.Core.Ktx" Version="1.19.0.1" />
+
+		<!-- androidx.media: MediaSessionCompat / MediaMetadataCompat / PlaybackStateCompat /
+		     MediaButtonReceiver / NotificationCompat.MediaStyle, usados por
+		     MediaPlaybackService para los controles nativos de reproducción
+		     (notificación, pantalla de bloqueo, auriculares Bluetooth). -->
+		<PackageReference Include="Xamarin.AndroidX.Media" Version="1.8.0.1" />
+	</ItemGroup>
+
+	<!-- Lyra AAudio Native RT backend (ported from Clean Room). -->
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+		<MIDIRiftNativeDir>$(MSBuildProjectDirectory)\Platforms\Android\Native</MIDIRiftNativeDir>
+		<!-- NDK resolution order for the custom native AAudio build:
+             1) -p:MIDIRiftNdkDirectory=... supplied by the developer
+             2) ANDROID_NDK_HOME
+             3) ANDROID_NDK_ROOT
+             4) historical MIDIRift fallback C:\AndroidNDK on Windows
+             See Docs/ANDROID_NDK_BUILD.md. -->
+		<MIDIRiftNdkDirectory Condition="'$(MIDIRiftNdkDirectory)' == '' and '$(ANDROID_NDK_HOME)' != ''">$(ANDROID_NDK_HOME)</MIDIRiftNdkDirectory>
+		<MIDIRiftNdkDirectory Condition="'$(MIDIRiftNdkDirectory)' == '' and '$(ANDROID_NDK_ROOT)' != ''">$(ANDROID_NDK_ROOT)</MIDIRiftNdkDirectory>
+		<MIDIRiftNdkDirectory Condition="'$(MIDIRiftNdkDirectory)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">C:\AndroidNDK</MIDIRiftNdkDirectory>
+		<MIDIRiftNdkBuild Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(MIDIRiftNdkDirectory)\ndk-build.cmd</MIDIRiftNdkBuild>
+		<MIDIRiftNdkBuild Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(MIDIRiftNdkDirectory)/ndk-build</MIDIRiftNdkBuild>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+		<AndroidNativeLibrary Include="Platforms\Android\Native\libs\arm64-v8a\libmidirift_rt_audio.so">
+			<Abi>arm64-v8a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\Native\libs\x86_64\libmidirift_rt_audio.so">
+			<Abi>x86_64</Abi>
+		</AndroidNativeLibrary>
+	</ItemGroup>
+
+	<Target Name="BuildMIDIRiftNativeAudio"
+			Condition="'$(TargetFramework)' == 'net10.0-android'"
+			BeforeTargets="Build"
+			Inputs="Platforms\Android\Native\jni\midirift_rt_audio.cpp;Platforms\Android\Native\jni\Android.mk;Platforms\Android\Native\jni\Application.mk"
+			Outputs="Platforms\Android\Native\libs\arm64-v8a\libmidirift_rt_audio.so;Platforms\Android\Native\libs\x86_64\libmidirift_rt_audio.so">
+		<Error Condition="!Exists('$(MIDIRiftNdkBuild)')" Text="No se encontró Android NDK en '$(MIDIRiftNdkBuild)'." />
+		<Exec Command="&quot;$(MIDIRiftNdkBuild)&quot; NDK_PROJECT_PATH=&quot;$(MIDIRiftNativeDir)&quot; NDK_APPLICATION_MK=&quot;$(MIDIRiftNativeDir)\jni\Application.mk&quot; APP_BUILD_SCRIPT=&quot;$(MIDIRiftNativeDir)\jni\Android.mk&quot;" />
+	</Target>
+
+</Project>

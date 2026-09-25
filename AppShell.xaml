@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="MIDIRift.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:MIDIRift"
+    Title="MIDIRift"
+    FlyoutBehavior="Disabled">
+
+    <!-- El contenido (TabBar con las pestañas "library" / "nowplaying") se
+         arma en AppShell.xaml.cs en vez de acá: ambas pantallas necesitan
+         recibir por constructor el mismo PlaylistController y el mismo
+         PlaybackBridge (ver PlaybackBridge.cs), y con
+         ContentTemplate="{DataTemplate ...}" no hay forma limpia de pasar
+         esas instancias compartidas. Construyendo los ShellContent a mano y
+         asignándoles .Content directamente, Shell mantiene esa MISMA
+         instancia de página viva mientras se navega entre pestañas — así
+         MainPage sigue reproduciendo música de fondo al pasar a Biblioteca. -->
+
+</Shell>
