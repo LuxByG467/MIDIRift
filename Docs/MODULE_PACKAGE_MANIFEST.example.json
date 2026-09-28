@@ -1,0 +1,18 @@
+{
+  "id": "community.example.theme-pack",
+  "name": "Example Theme Pack",
+  "version": "1.0.0",
+  "midiriftApi": "1",
+  "author": "Example Author",
+  "license": "MIT",
+  "source": "https://example.invalid/source",
+  "trust": "Community",
+  "modules": [
+    {
+      "id": "community.example.theme.midnight",
+      "name": "Midnight",
+      "type": "Theme",
+      "permissions": []
+    }
+  ]
+}
